@@ -38,13 +38,11 @@ class ViewController: UIViewController, UICollectionViewDelegate {
     Compani(name: "Cipla", image: UIImage(named: "image_4")!)
   ]
   
-  private var chipsCard = ChipsView()
+  private let kItemPadding = 15.0
   
   private lazy var collectionView: UICollectionView = {
     let layout = ChipsCustomViewFlowLayout()
-    layout.scrollDirection = .horizontal
-    layout.minimumLineSpacing = 5
-   // layout.estimatedItemSize = CGSize(width: 0, height: 40)
+    layout.delegate = self
     
     let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
     collectionView.register(ChipsCollectionViewCell.self)
@@ -53,8 +51,8 @@ class ViewController: UIViewController, UICollectionViewDelegate {
     collectionView.delegate = self
     collectionView.backgroundColor = .systemBackground
     collectionView.contentInsetAdjustmentBehavior = .always
-    collectionView.isScrollEnabled = true
     collectionView.isUserInteractionEnabled = true
+    collectionView.allowsMultipleSelection = true
     collectionView.showsHorizontalScrollIndicator = true
     return collectionView
   }()
@@ -70,11 +68,9 @@ class ViewController: UIViewController, UICollectionViewDelegate {
     view.addingSubviewsForAutoLayout([
       collectionView
     ])
-    collectionView.addSubview(chipsCard)
     
     NSLayoutConstraint.activate([
-      
-      collectionView.heightAnchor.constraint(equalToConstant: 150),
+      collectionView.heightAnchor.constraint(equalToConstant: 180),
       collectionView.topAnchor.constraint(equalTo: view.topAnchor, constant: 44),
       collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
       collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
@@ -83,7 +79,22 @@ class ViewController: UIViewController, UICollectionViewDelegate {
   
 }
 
-extension ViewController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+extension ViewController: UICollectionViewDataSource, MICollectionViewBubbleLayoutDelegate {
+  
+  // Calculate the content size for a collection cell
+  // spacingMargin - Includes image size and left and right margins
+  func collectionView(_ collectionView: UICollectionView, itemSizeAt indexPath: NSIndexPath) -> CGSize {
+    let string = chipsArray[indexPath.row].name
+    var size = string.size(OfFont: UIFont.systemFont(ofSize: 13))
+    let spacingMargin: CGFloat = 52.0
+    size.width = CGFloat(ceilf(Float(size.width + CGFloat(kItemPadding * 2)))) + spacingMargin
+    size.height = 40
+    
+    if size.width > collectionView.frame.size.width {
+        size.width = collectionView.frame.size.width
+    }
+    return size
+  }
   
   public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
     return chipsArray.count
@@ -95,15 +106,12 @@ extension ViewController: UICollectionViewDataSource, UICollectionViewDelegateFl
       title: chipsArray[indexPath.row].name,
       image: chipsArray[indexPath.row].image
     )
+    cell.layoutIfNeeded()
     return cell
   }
-  
-  func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-    let string = chipsArray[indexPath.row].name
-    let size = string.size(OfFont: UIFont.systemFont(ofSize: 13))
-    let spacingMargin: CGFloat = 62.0
-    let cellWidth = size.width + spacingMargin
-    return CGSize(width: cellWidth, height: 40)
+
+  func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    collectionView.deselectItem(at: indexPath, animated: false)
   }
   
 }

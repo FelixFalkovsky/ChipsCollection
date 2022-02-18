@@ -7,67 +7,105 @@
 
 import UIKit
 
-class ChipsCustomViewFlowLayout: UICollectionViewFlowLayout {
+protocol MICollectionViewBubbleLayoutDelegate {
+  func collectionView(_ collectionView: UICollectionView, itemSizeAt indexPath: NSIndexPath) -> CGSize
+}
 
+class ChipsCustomViewFlowLayout: UICollectionViewFlowLayout {
+  
+  private var itemAttributesCache: Array<UICollectionViewLayoutAttributes> = []
+  private var contentSize: CGSize = CGSize.zero
+  
+  var delegate: MICollectionViewBubbleLayoutDelegate?
+  
+  override var collectionViewContentSize: CGSize {
+    return contentSize
+  }
+  
   let cellSpacing:CGFloat = 4
   
   required override init() {
     super.init()
+    setup()
   }
   
   required init?(coder aDecoder: NSCoder) {
     super.init(coder: aDecoder)
+    setup()
+  }
+  
+  private func setup() {
+    scrollDirection = UICollectionView.ScrollDirection.horizontal
+    minimumLineSpacing = 10
+    minimumInteritemSpacing = 10
+  }
+  
+  override func prepare() {
+    super.prepare()
     
+    if (collectionView?.numberOfSections == 0 || collectionView?.numberOfItems(inSection: 0) == 0) {
+      return
+    }
+    
+    var x: CGFloat = 0
+    var y: CGFloat = 0
+    var iSize: CGSize = CGSize.zero
+    var collectionWidth: CGFloat = 0.0
+    var indexPath: NSIndexPath?
+    let numberOfItems: NSInteger = (self.collectionView?.numberOfItems(inSection: 0))!
+    itemAttributesCache = []
+    
+    for index in 0..<numberOfItems {
+      
+      indexPath = NSIndexPath(item: index, section: 0)
+      iSize = (delegate?.collectionView(collectionView!, itemSizeAt: indexPath!)) as! CGSize
+      
+      var itemRect: CGRect = CGRect(x: x, y: y, width: iSize.width, height: iSize.height)
+      if (x >= 900) {
+        //...Checking if item width is greater than collection view width then set item in new row.
+        itemRect.origin.x = 0
+        itemRect.origin.y = y + iSize.height + minimumLineSpacing
+      } else if (y >= 120) {
+        itemRect.origin.x = 0
+        itemRect.origin.y = y + iSize.width + minimumLineSpacing
+      }
+      
+      let itemAttributes = UICollectionViewLayoutAttributes(forCellWith: indexPath! as IndexPath)
+      itemAttributes.frame = itemRect
+      itemAttributesCache.append(itemAttributes)
+      
+      x = itemRect.origin.x + iSize.width + minimumInteritemSpacing
+      y = itemRect.origin.y 
+    }
+    
+    x += iSize.height + self.minimumLineSpacing
+    y = 0
+    
+    collectionWidth = (collectionView?.frame.size.width)! * 10 + minimumLineSpacing
+    contentSize = CGSize(width: collectionWidth, height: y)
+  }
+  
+  override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
+    return true
   }
   
   override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
-    self.minimumLineSpacing = 4.0
-    self.sectionInset = UIEdgeInsets(top: 4, left: 4, bottom: 4, right: 8)
-    let attributes = super.layoutAttributesForElements(in: rect)
     
-    var leftMargin = sectionInset.left
-    var maxY: CGFloat = -1.0
-    attributes?.forEach { layoutAttribute in
-      if layoutAttribute.frame.origin.y >= maxY {
-        leftMargin = sectionInset.left
-      }
-      layoutAttribute.frame.origin.x = leftMargin
-      leftMargin += layoutAttribute.frame.width + cellSpacing
-      maxY = max(layoutAttribute.frame.maxY , maxY)
+    let numberOfItems = (self.collectionView?.numberOfItems(inSection: 0))!
+    
+    let itemAttributes = itemAttributesCache.filter {
+      $0.frame.intersects(rect) &&
+      $0.indexPath.row < numberOfItems
     }
-    return attributes
+    
+    return itemAttributes
   }
   
-  //    override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
-  //  
-  //      guard let attributes = super.layoutAttributesForElements(in:rect) else { return [] }
-  //  
-  //      var leftMargin: CGFloat = sectionInset.left
-  //      var maxY: CGFloat = -1.0
-  //      let cellHeight: CGFloat = 40.0
-  //  
-  //      attributes.forEach { layoutAttribute in
-  //       // let cell = viewController.widthChips()
-  //        layoutAttribute.bounds.size.width = cell
-  //        layoutAttribute.bounds.size.height = cellHeight
-  //  
-  //        if layoutAttribute.frame.origin.y >= cell {
-  //          //layoutAttribute.frame.origin.x = cell + 10
-  //          leftMargin = layoutAttribute.frame.origin.x + cell
-  //        } else {
-  //          leftMargin = cell + 120
-  //        }
-  //  
-  //        layoutAttribute.frame.origin.x = cell
-  //  
-  //        let delegate = collectionView?.delegate as? UICollectionViewDelegateFlowLayout
-  //        let spacing = delegate?.collectionView?(collectionView!, layout: self, minimumInteritemSpacingForSectionAt: 0) ?? minimumInteritemSpacing
-  //  
-  //        leftMargin += layoutAttribute.bounds.size.width + 10
-  //        maxY = max(layoutAttribute.frame.maxY , maxY)
-  //      }
-  //      return attributes
-  //    }
+  override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+    return itemAttributesCache.first {
+      $0.indexPath == indexPath
+    }
+  }
   
 }
 
