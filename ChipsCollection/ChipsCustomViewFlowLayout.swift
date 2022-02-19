@@ -65,7 +65,7 @@ class ChipsCustomViewFlowLayout: UICollectionViewFlowLayout {
         //...Checking if item width is greater than collection view width then set item in new row.
         itemRect.origin.x = 0
         itemRect.origin.y = y + iSize.height + minimumLineSpacing
-      } else if (y >= 120) {
+      } else if (y >= (collectionView?.frame.height)!) {
         itemRect.origin.x = 0
         itemRect.origin.y = y + iSize.width + minimumLineSpacing
       }
